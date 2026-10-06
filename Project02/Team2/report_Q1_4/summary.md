@@ -1,38 +1,56 @@
-# Readmission Risk Modeling: EDA and Baseline Pipeline Report
-**Digital Health & Medical Data Science Track**
+# Clinical Analysis & Fairness Summary
+## Fair, Interpretable, and Actionable Readmission Risk Modeling
 
-## Abstract
-This technical report addresses questions Q1 through Q4 for the diabetic hospital readmission dataset (101,766 encounters spanning 1999–2008). It covers exploratory data analysis, data quality assessment, feature association analysis, and a rigorous baseline machine learning pipeline designed to prevent data leakage.
+### 1. Main Patterns (from Q1–Q3)
+- Early readmission (<30 days) occurs in approximately **11.2%** of encounters.
+- Patients who are readmitted early tend to have:
+  - Longer hospital stays
+  - Higher number of medications
+  - Significantly more prior inpatient visits
+  - Higher number of diagnoses
+- Prior utilization history is the strongest observable signal in the dataset.
+- Observed associations must **not** be interpreted as causal.
 
----
+### 2. Model Performance (Q4–Q5)
+- Baseline models (Logistic Regression + Decision Tree) provide a transparent risk signal.
+- Overall accuracy is **not** a sufficient metric due to class imbalance.
+- Primary evaluation focuses on **Recall** and **F1-score of the <30 class**.
+- Missing an early-readmission case (False Negative) has higher clinical cost than a False Positive in this context.
 
-## Q1: Population Overview & Data Quality Assessment
+### 3. Error Analysis (Q6)
+- False Negatives tend to occur among patients with less extreme utilization numbers (harder borderline cases).
+- Errors are not randomly distributed; they show some concentration by age and prior utilization.
 
-* **Dataset Scope:** The dataset contains 101,766 inpatient encounters across 130 US hospitals.
-* **Target Distribution:** The target variable `readmitted` shows significant class imbalance:
-  * No Readmission (`NO`): 54,864 encounters (53.9%)
-  * Readmission after 30 days (`>30`): 35,545 encounters (34.9%)
-  * Early Readmission within 30 days (`<30`): 11,357 encounters (11.2%)
-* **Data Quality Issues:** Severe missingness was detected in specific columns, notably `weight` (>96% missing values), justifying its exclusion from predictive modeling.
+### 4. Feature Drivers (Q7)
+- Strongest contributors (Logistic Regression coefficients & permutation importance):
+  - `number_inpatient` (prior hospitalizations)
+  - Length of stay and medication count
+  - Certain discharge dispositions and admission types
+  - Selected diagnosis categories
+- These are associative, not causal, findings.
 
----
+### 5. Fairness Findings (Q8)
+- Model Recall and False-Negative Rate are **not identical** across race, gender, and age brackets.
+- Differences are reported transparently.
+- Possible explanations: sample-size imbalance, differing base rates, unmeasured social determinants.
+- The model should **not** be used to make decisions that systematically disadvantage any subgroup without further mitigation and prospective monitoring.
 
-## Q2: Clinical Measurements Across Readmission Groups
+### 6. Recommendations for Hospital Leadership (Q9)
+1. Treat the model strictly as a **risk-stratification aid** for enhanced discharge planning and early follow-up — never for care denial.
+2. Prioritize patients with high prior inpatient utilization for medication reconciliation and rapid outpatient contact.
+3. Before any real-world use:
+   - Retrain on contemporary data (post-2010, ICD-10 era)
+   - Add social-determinant and medication-adherence variables
+   - Perform prospective validation
+   - Implement continuous fairness monitoring
+4. Improve structured capture of A1C, weight, and specialty information going forward.
 
-* Comparative statistical analysis using group aggregations indicates that prior utilization metrics—specifically `number_inpatient`—exhibit the most striking differences across readmission groups.
-* Patients readmitted within 30 days present a higher mean number of prior inpatient visits, longer hospital stays, and increased medication counts compared to non-readmitted cohorts.
+### 7. Critical Limitations
+- Data period: 1999–2008
+- ICD-9 coding only
+- High missingness in clinically important variables (weight, A1C, glucose)
+- Encounter-level rather than purely patient-level split
+- No external validation set
+- US hospital setting only
 
----
-
-## Q3: Association Analysis & Clinical Causation
-
-* A binary target (`target_early_readmit`) was formulated to isolate early readmissions (`<30`).
-* **Important Caveat:** While variables such as prior inpatient visits strongly correlate with early readmissions, observed statistical associations do not prove direct causation. These features act as clinical risk proxies reflecting chronic disease severity and outpatient care gaps.
-
----
-
-## Q4: Preprocessing Pipeline & Baseline Model
-
-* **Data Leakage Mitigation:** Data splitting was strictly executed at the unique patient level (`patient_nbr`) to ensure encounters from the same patient do not span across both training and testing sets.
-* **Pipeline Architecture:** Scikit-Learn pipelines were built incorporating median imputation and standard scaling for numerical features, alongside one-hot encoding for categorical attributes.
-* **Baseline Performance:** A Logistic Regression model configured with balanced class weights served as the baseline predictor, establishing benchmark evaluation metrics.
+**This analysis is educational. It is not a clinical decision-support tool.**
